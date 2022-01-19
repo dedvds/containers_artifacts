@@ -1,0 +1,61 @@
+# This is a SecretProviderClass example using user-assigned identity to access your key vault
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: azure-kvname-user-msi
+spec:
+  provider: azure
+  secretObjects:                              # [OPTIONAL] SecretObjects defines the desired state of synced Kubernetes secret objects
+  - data:
+    - key: username                           # data field to populate
+      objectName: sqluser                        # name of the mounted content to sync; this could be the object name or the object alias
+    secretName: test2                     # name of the Kubernetes secret object
+    type: Opaque                              # type of Kubernetes secret object (for example, Opaque, kubernetes.io/tls)
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"          # Set to true for using managed identity
+    userAssignedIdentityID: fdfe5b0f-676e-44fb-9802-21370fe6f863   # Set the clientID of the user-assigned managed identity to use
+    keyvaultName: akv-team10        # Set to the name of your key vault
+    cloudName: ""                         # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
+    objects:  |
+      array:
+        - |
+          objectName: sqluser
+          objectType: secret              # object types: secret, key, or cert
+          objectVersion: ""               # [OPTIONAL] object versions, default to latest if empty
+          secretName: test
+        - |
+          objectName: sqlpassword
+          objectType: secret
+          objectVersion: ""
+    tenantId: 2a96ab19-0fc7-4ae8-89cd-4497d0cdde3e                 # The tenant ID of the key vault
+---
+  # This is a sample pod definition for using SecretProviderClass and the user-assigned identity to access your key vault
+kind: Pod
+apiVersion: v1
+metadata:
+  name: busybox-secrets-store-inline
+spec:
+  containers:
+    - name: busybox
+      image: k8s.gcr.io/e2e-test-images/busybox:1.29-1
+      command:
+        - "/bin/sleep"
+        - "10000"
+      volumeMounts:
+      - name: secrets-store01-inline
+        mountPath: "/mnt/secrets-store"
+        readOnly: true
+      env:
+      - name: SQL_USER
+        valueFrom:
+          secretKeyRef:
+            name: test2
+            key: username
+  volumes:
+    - name: secrets-store01-inline
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: "azure-kvname-user-msi"
