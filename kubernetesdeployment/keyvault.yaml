@@ -3,13 +3,16 @@ apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
   name: azure-kvname-user-msi
+  namespace: api
 spec:
   provider: azure
   secretObjects:                              # [OPTIONAL] SecretObjects defines the desired state of synced Kubernetes secret objects
   - data:
     - key: username                           # data field to populate
-      objectName: sqluser                        # name of the mounted content to sync; this could be the object name or the object alias
-    secretName: test2                     # name of the Kubernetes secret object
+      objectName: sqluser
+    - key: password
+      objectName: sqlpassword                        # name of the mounted content to sync; this could be the object name or the object alias
+    secretName: sqlconnection                     # name of the Kubernetes secret object
     type: Opaque                              # type of Kubernetes secret object (for example, Opaque, kubernetes.io/tls)
   parameters:
     usePodIdentity: "false"
@@ -50,8 +53,13 @@ spec:
       - name: SQL_USER
         valueFrom:
           secretKeyRef:
-            name: test2
+            name: sqlconnection
             key: username
+      - name: SQL_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: sqlconnection
+            key: password
   volumes:
     - name: secrets-store01-inline
       csi:

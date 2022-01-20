@@ -1,0 +1,4 @@
+.\helm.exe repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+.\helm.exe repo update
+
+.\helm.exe install ingress-nginx ingress-nginx/ingress-nginx --create-namespace --namespace ingress-basic
